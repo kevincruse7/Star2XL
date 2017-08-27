@@ -31,11 +31,9 @@ def get_bonds(sheet=None, index=False):
             if index:
                 if sheet.cell(row=row, column=14).value == None:
                     bonds.append(Bond(ticker, row))
-                    break
             else:
                 if sheet.cell(row=row, column=14).value != None:
                     bonds.append(Bond(ticker, row))
-                    break
     return bonds
 
 # Get bond values from Morningstar
