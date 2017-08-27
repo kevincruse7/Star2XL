@@ -1,4 +1,4 @@
-#! python3*
+#! python3
 #  Scrape bond data from Morningstar and dump into Excel
 
 import datetime, openpyxl
