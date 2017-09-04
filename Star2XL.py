@@ -1,5 +1,5 @@
-#! python3
-#  Scrape bond data from Morningstar and dump into Excel
+#!python3
+# Scrape bond data from Morningstar and dump into Excel
 
 import datetime, openpyxl
 from openpyxl.styles import Font, colors
@@ -21,6 +21,82 @@ class Bond:
         self.t1     = t1
         self.t3     = t3
         self.t5     = t5
+
+def main():
+    # Get path to spreadsheet
+    print('Getting spreadsheet path...')
+    file = open('excelpath.txt')
+    path = file.read()
+    file.close()
+
+    # Create new sheet in workbook
+    print('Preparing workbook...')
+    workbook = openpyxl.load_workbook(path)
+    sheet = workbook.copy_worksheet(workbook.active)
+    sheet.conditional_formatting = workbook.active.conditional_formatting
+    sheet.title = datetime.datetime.now().strftime('%b %Y')
+
+    # Get list of bonds and indexes from spreadsheet
+    print('Getting list of bonds...')
+    indexes = get_bonds(sheet, index=True)
+    bonds = get_bonds(sheet)
+
+    # Get bond values from Morningstar
+    print('Getting index bond values...\n')
+    browser = webdriver.Chrome()
+    get_values(browser, indexes)
+    print('Getting bond values...\n')
+    get_values(browser, bonds)
+    browser.quit()
+
+    # Fill in empty bond values with index data
+    print('Filling in empty bond values with index data...')
+    for bond in bonds:
+        # Find corresponding index
+        for index in indexes:
+            if bond.row < index.row:
+                break
+
+        # Fill in empty bond values with index data
+        if bond.yld == '':
+            bond.yld = index.yld
+            bond.index.append(7)
+        if bond.ytd == '':
+            bond.ytd = index.ytd
+            bond.index.append(15)
+        if bond.mtd == '':
+            bond.mtd = index.mtd
+            bond.index.append(16)
+        if bond.qtd == '':
+            bond.qtd = index.qtd
+            bond.index.append(17)
+        if bond.t1 == '':
+            bond.t1 = index.t1
+            bond.index.append(18)
+        if bond.t3 == '':
+            bond.t3 = index.t3
+            bond.index.append(19)
+        if bond.t5 == '':
+            bond.t5 = index.t5
+            bond.index.append(20)
+
+    # Convert index and bond values to floats
+    print('Converting bond values to floating point numbers...')
+    to_floats(indexes)
+    to_floats(bonds)
+
+    # Save bonds to spreadsheet
+    print('Saving bonds to spreadsheet...')
+    write_bonds(sheet, indexes)
+    write_bonds(sheet, bonds)
+    workbook.active = workbook.get_sheet_names().index(sheet.title)
+    path = path.split('\\')
+    del path[-1]
+    path.append('output.xlsx')
+    path = '\\'.join(path)
+    workbook.save(path)
+
+    print('Done!')
 
 # Get list of bonds or indexes from spreadsheet
 def get_bonds(sheet=None, index=False):
@@ -102,77 +178,5 @@ def write_bonds(sheet=None, bonds=[]):
         for column in bond.index:
             sheet.cell(row=bond.row, column=column).font = Font(color=colors.BLUE, italic=True)
 
-# Get path to spreadsheet
-print('Getting spreadsheet path...')
-file = open('excelpath.txt')
-path = file.read()
-file.close()
-
-# Create new sheet in workbook
-print('Preparing workbook...')
-workbook = openpyxl.load_workbook(path)
-sheet = workbook.copy_worksheet(workbook.active)
-sheet.conditional_formatting = workbook.active.conditional_formatting
-sheet.title = datetime.datetime.now().strftime('%b %Y')
-
-# Get list of bonds and indexes from spreadsheet
-print('Getting list of bonds...')
-indexes = get_bonds(sheet, index=True)
-bonds = get_bonds(sheet)
-
-# Get bond values from Morningstar
-print('Getting index bond values...\n')
-browser = webdriver.Chrome()
-get_values(browser, indexes)
-print('Getting bond values...\n')
-get_values(browser, bonds)
-browser.quit()
-
-# Fill in empty bond values with index data
-print('Filling in empty bond values with index data...')
-for bond in bonds:
-    # Find corresponding index
-    for index in indexes:
-        if bond.row < index.row:
-            break
-
-    # Fill in empty bond values with index data
-    if bond.yld == '':
-        bond.yld = index.yld
-        bond.index.append(7)
-    if bond.ytd == '':
-        bond.ytd = index.ytd
-        bond.index.append(15)
-    if bond.mtd == '':
-        bond.mtd = index.mtd
-        bond.index.append(16)
-    if bond.qtd == '':
-        bond.qtd = index.qtd
-        bond.index.append(17)
-    if bond.t1 == '':
-        bond.t1 = index.t1
-        bond.index.append(18)
-    if bond.t3 == '':
-        bond.t3 = index.t3
-        bond.index.append(19)
-    if bond.t5 == '':
-        bond.t5 = index.t5
-        bond.index.append(20)
-
-# Convert index and bond values to floats
-print('Converting bond values to floating point numbers...')
-to_floats(indexes)
-to_floats(bonds)
-
-# Save bonds to spreadsheet
-print('Saving bonds to spreadsheet...')
-write_bonds(sheet, indexes)
-write_bonds(sheet, bonds)
-workbook.active = workbook.get_sheet_names().index(sheet.title)
-path = path.split('\\')
-del path[-1]
-path.append('output.xlsx')
-path = '\\'.join(path)
-workbook.save(path)
-
-print('Done!')
+if __name__ == '__main__':
+    main()
