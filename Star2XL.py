@@ -1,7 +1,7 @@
 #!python3
 
 # Author: Kevin Cruse
-# Version: 1.0.0
+# Version: 1.0.1
 # Description: Scrape bond data from Morningstar and dump into Excel
 #
 # Program-specific jargon:
@@ -34,7 +34,7 @@ class Bond:
         self.t5     = 0.0     # 5-year TTR of bond
 
 # Get list of bonds or indexes from spreadsheet
-def get_bonds(sheet=None, onlyIndex=False):
+def get_bonds(sheet=None, only_index=False):
     row = 0      # Iterator for traversing rows of spreadsheet
     ticker = ''  # Ticker name of bond    
     bonds = []   # List to store bonds found in spreadsheet
@@ -45,7 +45,7 @@ def get_bonds(sheet=None, onlyIndex=False):
         ticker = sheet.cell(row=row, column=3).value
         if ticker and len(ticker) <= 5:
             # If only index bonds are desired, check to see if bond is index before appending bond to list
-            if onlyIndex:
+            if only_index:
                 if sheet.cell(row=row, column=14).value == None:
                     bonds.append(Bond(ticker, row))
             # Else, append bond to list
