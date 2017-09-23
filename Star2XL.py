@@ -1,7 +1,7 @@
 #!python3
 
 # Author: Kevin Cruse
-# Version: 1.0.1
+# Version: 1.0.2
 # Description: Scrape bond data from Morningstar and dump into Excel
 #
 # Program-specific jargon:
@@ -23,15 +23,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 class Bond:
     def __init__(self, ticker='', row=0):
         self.ticker = ticker  # Ticker name of bond
-        self.row    = row     # Row number of bond in spreadsheet
-        self.index  = []      # Column numbers of empty bond values on spreadsheet that need to be filled with index bond values
-        self.yld    = 0.0     # TTM yield of bond
-        self.ytd    = 0.0     # Year-to-date TTR of bond
-        self.mtd    = 0.0     # Month-to-date TTR of bond
-        self.qtd    = 0.0     # Quarter-to-date TTR of bond
-        self.t1     = 0.0     # 1-year TTR of bond
-        self.t3     = 0.0     # 3-year TTR of bond
-        self.t5     = 0.0     # 5-year TTR of bond
+        self.row = row        # Row number of bond in spreadsheet
+        self.index = []       # Column numbers of empty bond values on spreadsheet that need to be filled with index bond values
+        self.yld = 0.0        # TTM yield of bond
+        self.ytd = 0.0        # Year-to-date TTR of bond
+        self.mtd = 0.0        # Month-to-date TTR of bond
+        self.qtd = 0.0        # Quarter-to-date TTR of bond
+        self.t1 = 0.0         # 1-year TTR of bond
+        self.t3 = 0.0         # 3-year TTR of bond
+        self.t5 = 0.0         # 5-year TTR of bond
 
 # Get list of bonds or indexes from spreadsheet
 def get_bonds(sheet=None, only_index=False):
@@ -94,17 +94,17 @@ def get_values(browser=None, bonds=[]):
 
         # Store and display rest of bond data
         bond.ytd = element[3].text
-        print('YTD Trailing Total Return'.ljust(29)    + ':' + bond.ytd.rjust(7) + '%')
+        print('YTD Trailing Total Return'.ljust(29) + ':' + bond.ytd.rjust(7) + '%')
         bond.mtd = element[0].text
-        print('MTD Trailing Total Return'.ljust(29)    + ':' + bond.mtd.rjust(7) + '%')
+        print('MTD Trailing Total Return'.ljust(29) + ':' + bond.mtd.rjust(7) + '%')
         bond.qtd = element[1].text
-        print('QTD Trailing Total Return'.ljust(29)    + ':' + bond.qtd.rjust(7) + '%')
-        bond.t1  = element[4].text
-        print('1-Year Trailing Total Return'.ljust(29) + ':' + bond.t1.rjust(7)  + '%')
-        bond.t3  = element[5].text
-        print('3-Year Trailing Total Return'.ljust(29) + ':' + bond.t3.rjust(7)  + '%')
-        bond.t5  = element[6].text
-        print('5-Year Trailing Total Return'.ljust(29) + ':' + bond.t5.rjust(7)  + '%\n')
+        print('QTD Trailing Total Return'.ljust(29) + ':' + bond.qtd.rjust(7) + '%')
+        bond.t1 = element[4].text
+        print('1-Year Trailing Total Return'.ljust(29) + ':' + bond.t1.rjust(7) + '%')
+        bond.t3 = element[5].text
+        print('3-Year Trailing Total Return'.ljust(29) + ':' + bond.t3.rjust(7) + '%')
+        bond.t5 = element[6].text
+        print('5-Year Trailing Total Return'.ljust(29) + ':' + bond.t5.rjust(7) + '%\n')
 
         break
 
@@ -118,9 +118,9 @@ def to_floats(bonds=[]):
          bond.ytd = float(bond.ytd)
          bond.mtd = float(bond.mtd)
          bond.qtd = float(bond.qtd)
-         bond.t1  = float(bond.t1)
-         bond.t3  = float(bond.t3)
-         bond.t5  = float(bond.t5)
+         bond.t1 = float(bond.t1)
+         bond.t3 = float(bond.t3)
+         bond.t5 = float(bond.t5)
 
 # Write bonds to spreadsheet
 def write_bonds(sheet=None, bonds=[]):
