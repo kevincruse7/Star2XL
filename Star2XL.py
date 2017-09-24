@@ -106,8 +106,6 @@ def get_values(browser=None, bonds=[]):
         bond.t5 = element[6].text
         print('5-Year Trailing Total Return'.ljust(29) + ':' + bond.t5.rjust(7) + '%\n')
 
-        break
-
 # Convert bond values from strings to floats
 def to_floats(bonds=[]):
     bond = None  # Iterator for traversing list of bonds
