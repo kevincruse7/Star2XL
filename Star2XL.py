@@ -1,10 +1,10 @@
 #!python3
 
 # Author: Kevin Cruse
-# Version: 1.0.2
+# Version: 1.1.0
 # Description: Scrape bond data from Morningstar and dump into Excel
 #
-# Program-specific jargon:
+# Jargon:
 #   Index bonds: Stable bonds used as a control to evaluate performance of non-index bonds
 #   Non-index bonds: Bonds that aren't used as indexes (typically fluctuate more than index bonds)
 #
@@ -12,6 +12,7 @@
 #   TTM: Trailing twelve month
 #   TTR: Trailing total return
 
+import sys
 import openpyxl
 from openpyxl.styles import Font, colors
 from selenium import webdriver
@@ -25,6 +26,7 @@ class Bond:
         self.ticker = ticker  # Ticker name of bond
         self.row = row        # Row number of bond in spreadsheet
         self.index = []       # Column numbers of empty bond values on spreadsheet that need to be filled with index bond values
+        self.exp = 0.0        # Expense ratio of bond
         self.yld = 0.0        # TTM yield of bond
         self.ytd = 0.0        # Year-to-date TTR of bond
         self.mtd = 0.0        # Month-to-date TTR of bond
@@ -39,12 +41,11 @@ def get_bonds(sheet=None, only_index=False):
     ticker = ''  # Ticker name of bond    
     bonds = []   # List to store bonds found in spreadsheet
     
-    # Traverse rows of spreadsheet to find bonds
     for row in range(2, sheet.max_row + 1):
         # If row contains ticker, then add bond to list
         ticker = sheet.cell(row=row, column=3).value
         if ticker and len(ticker) <= 5:
-            # If only index bonds are desired, check to see if bond is index before appending bond to list
+            # If only index bonds are desired, check if bond is index before appending to list
             if only_index:
                 if sheet.cell(row=row, column=14).value == None:
                     bonds.append(Bond(ticker, row))
@@ -57,78 +58,123 @@ def get_bonds(sheet=None, only_index=False):
 
 # Get bond values from Morningstar
 def get_values(browser=None, bonds=[]):
-    bond = None     # Iterator for traversing list of bonds
-    element = None  # HTML element
+    bond = None      # Iterator for traversing list of bonds
+    index = 1        # Index for compare list
+    compare = [0, 1] # Store data from different loads to check for errors    
+    failures = 0     # Number of failures loading Morningstar
+    element = None   # HTML element
+    i = 0            # General iterator
     
-    # Traverse list of bonds and get bond data for each from Morningstar
     for bond in bonds:
         print('Fetching data for ' + bond.ticker + '...')
 
         # Get TTM yield
-        while True:
-            try:
-                # Ping Morninstar and select element containing TTM yield
-                browser.get('http://quotes.morningstar.com/fund/fundquote/f?t=' + bond.ticker + '&culture=en_us&platform=RET&test=QuoteiFrame')
-                element = WebDriverWait(browser, 60).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm21"] > span')))
-                break
-            except:
-                # Refresh if page times out
-                print('\nError loading page. Refreshing...\n')
+        # Only compare results when page has been loaded multiple of 2 times
+        while not (index and compare[0] == compare[1]):
+            # Switch between first and second element of compare list
+            index = int(not index)
+            
+            # Load page
+            while failures != -1:
+                try:
+                    element = []
+                    browser.get('http://quotes.morningstar.com/fund/fundquote/f?t=' + bond.ticker + '&culture=en_us&platform=RET&test=QuoteiFrame')
+                    element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm2b"] > span'))))
+                    element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm21"] > span'))))                    
+                    failures = -1
+                except Exception as e:
+                    print('\nError loading page:\n' + e)
+                
+                    # Exit program if page fails to load 5 times
+                    failures += 1
+                    if failures < 5:
+                        print('Refreshing...\n')
+                    else:
+                        print('Unable to retreive data from Morningstar. Exiting program...')
+                        sys.exit()
+            
+            # Store collected data as text and reset failure count
+            compare[index] = []
+            compare[index].append(element[0].text.rstrip('%'))
+            compare[index].append(element[1].text.rstrip('%'))
+            failures = 0
+            
 
         # Store and display TTM yield
-        bond.yld = element.text.rstrip('%')
+        bond.exp = compare[0][0]
+        print('Expense Ratio'.ljust(29) + ':' + bond.exp.rjust(7) + '%')
+        bond.yld = compare[0][1]
         print('TTM Yield'.ljust(29) + ':' + bond.yld.rjust(7) + '%')
+        compare = [0, 1]
 
         # Get rest of bond data
-        while True:
-            try:
-                # Ping Morningstar and select table containing rest of bond data
-                browser.get('http://performance.morningstar.com/fund/performance-return.action?t=' + bond.ticker + '&region=usa&culture=en_US')
-                element = WebDriverWait(browser, 60).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'a[tabname="#tabquarter"]')))
-                element.click()
-                element = WebDriverWait(browser, 60).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, 'div[id="tab-quar-end-content"] td[class="row_data"]')))
-                break
-            except:
-                # Refresh if page times out
-                print('\nError loading page. Refreshing...\n')
+        # Only compare results when page has been loaded multiple of 2 times
+        while not (index and compare[0] == compare[1]):
+            # Switch between first and second element of compare list
+            index = int(not index) 
+            
+            # Load page
+            while failures != -1:
+                try:
+                    browser.get('http://performance.morningstar.com/fund/performance-return.action?t=' + bond.ticker + '&region=usa&culture=en_US')
+                    element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'a[tabname="#tabquarter"]')))
+                    element.click()
+                    element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, 'div[id="tab-quar-end-content"] td[class="row_data"]')))
+                    failures = -1
+                except Exception as e:
+                    print('\nError loading page:\n')
+                    print(e)
+
+                    # Exit program if page fails to load 5 times
+                    failures += 1
+                    if failures < 5:
+                        print('Refreshing...\n')
+                    else:
+                        print('Unable to retreive data from Morningstar. Exiting program...')
+                        sys.exit()
+            
+            # Store collected data as text and reset failure count            
+            compare[index] = []
+            for i in range(len(element)):
+                compare[index].append(element[i].text)
+            failures = 0
 
         # Store and display rest of bond data
-        bond.ytd = element[3].text
+        bond.ytd = compare[0][3]
         print('YTD Trailing Total Return'.ljust(29) + ':' + bond.ytd.rjust(7) + '%')
-        bond.mtd = element[0].text
+        bond.mtd = compare[0][0]
         print('MTD Trailing Total Return'.ljust(29) + ':' + bond.mtd.rjust(7) + '%')
-        bond.qtd = element[1].text
+        bond.qtd = compare[0][1]
         print('QTD Trailing Total Return'.ljust(29) + ':' + bond.qtd.rjust(7) + '%')
-        bond.t1 = element[4].text
+        bond.t1 = compare[0][4]
         print('1-Year Trailing Total Return'.ljust(29) + ':' + bond.t1.rjust(7) + '%')
-        bond.t3 = element[5].text
+        bond.t3 = compare[0][5]
         print('3-Year Trailing Total Return'.ljust(29) + ':' + bond.t3.rjust(7) + '%')
-        bond.t5 = element[6].text
+        bond.t5 = compare[0][6]
         print('5-Year Trailing Total Return'.ljust(29) + ':' + bond.t5.rjust(7) + '%\n')
 
 # Convert bond values from strings to floats
 def to_floats(bonds=[]):
     bond = None  # Iterator for traversing list of bonds
     
-    # Travserse list of bonds and convert each value of bond from string to float
     for bond in bonds:
-         bond.yld = float(bond.yld)
-         bond.ytd = float(bond.ytd)
-         bond.mtd = float(bond.mtd)
-         bond.qtd = float(bond.qtd)
-         bond.t1 = float(bond.t1)
-         bond.t3 = float(bond.t3)
-         bond.t5 = float(bond.t5)
+        bond.exp = float(bond.exp)
+        bond.yld = float(bond.yld)
+        bond.ytd = float(bond.ytd)
+        bond.mtd = float(bond.mtd)
+        bond.qtd = float(bond.qtd)
+        bond.t1 = float(bond.t1)
+        bond.t3 = float(bond.t3)
+        bond.t5 = float(bond.t5)
 
 # Write bonds to spreadsheet
 def write_bonds(sheet=None, bonds=[]):
     bond = None  # Iterator for traversing list of bonds
-    values = {}  # Dictionary to correlate location of data on spreadsheet with data itself
+    values = {}  # Dictionary to map out locations of data on spreadsheet
     
-    # Traveres list of bonds and write each to spreadsheet
     for bond in bonds:
-        # Fill dictionary with locations and correlating data
-        values = {7:(bond.yld / 100), 15:bond.ytd, 16:bond.mtd, 17:bond.qtd, 18:bond.t1, 19:bond.t3, 20:bond.t5}
+        # Map data to locations on spreadsheet
+        values = {6:(bond.exp / 100.0), 7:(bond.yld / 100.0), 15:bond.ytd, 16:bond.mtd, 17:bond.qtd, 18:bond.t1, 19:bond.t3, 20:bond.t5}
 
         # Write non-empty bond values to spreadsheet
         for column in list(values.keys()):
@@ -174,7 +220,6 @@ def main():
     get_values(browser, bonds)
     browser.quit()
 
-    # Traverse list of bonds, fill in empty bond values with index ones, and store locations of empty bond values
     print('Filling in empty bond values with index data...')
     for bond in bonds:
         # Find corresponding index
@@ -182,7 +227,10 @@ def main():
             if bond.row < index.row:
                 break
 
-        # Fill in empty bond values with index ones and store locations of empty bond values
+        # Fill in empty bonds with index data and keep track of locations of empty bonds
+        if bond.exp == '':
+            bond.exp = index.exp
+            bond.index.append(6)
         if bond.yld == '':
             bond.yld = index.yld
             bond.index.append(7)
@@ -224,6 +272,5 @@ def main():
 
     print('Done!')
 
-# Only run if program is directly invoked
 if __name__ == '__main__':
     main()
