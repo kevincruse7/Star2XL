@@ -64,80 +64,98 @@ def get_values(browser=None, bonds=[]):
     failures = 0     # Number of failures loading Morningstar
     element = None   # HTML element
     i = 0            # General iterator
+    yeet = True
     
     for bond in bonds:
         print('Fetching data for ' + bond.ticker + '...')
 
-        # Get TTM yield
-        # Only compare results when page has been loaded multiple of 2 times
-        while not (index and compare[0] == compare[1]):
-            # Switch between first and second element of compare list
-            index = int(not index)
-            
-            # Load page
-            while failures != -1:
-                try:
-                    element = []
-                    browser.get('http://quotes.morningstar.com/fund/fundquote/f?t=' + bond.ticker + '&culture=en_us&platform=RET&test=QuoteiFrame')
-                    element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm2b"] > span'))))
-                    element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm21"] > span'))))                    
-                    failures = -1
-                except Exception as e:
-                    print('\nError loading page:\n' + e)
-                
-                    # Exit program if page fails to load 5 times
-                    failures += 1
-                    if failures < 5:
-                        print('Refreshing...\n')
-                    else:
-                        print('Unable to retreive data from Morningstar. Exiting program...')
-                        sys.exit()
-            
-            # Store collected data as text and reset failure count
-            compare[index] = []
-            compare[index].append(element[0].text.rstrip('%'))
-            compare[index].append(element[1].text.rstrip('%'))
-            failures = 0
-            
+        # hopefully temporary
+        yeet = True
+        while yeet:
+            try:
+                # Get TTM yield
+                # Only compare results when page has been loaded multiple of 2 times
+                index = 1
+                compare = [0, 1]
+                while not (index and compare[0] == compare[1]):
+                    # Switch between first and second element of compare list
+                    index = int(not index)
+                    
+                    # Load page
+                    failures = 0
+                    while failures != -1:
+                        try:
+                            element = []
+                            browser.get('http://quotes.morningstar.com/fund/fundquote/f?t=' + bond.ticker + '&culture=en_us&platform=RET&test=QuoteiFrame')
+                            element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm2b"] > span'))))
+                            element.append(WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'td[class="gr_table_colm21"] > span'))))                    
+                            failures = -1
+                        except Exception as e:
+                            print('\nError loading page:\n' + e)
+                        
+                            # Exit program if page fails to load 5 times
+                            failures += 1
+                            if failures < 5:
+                                print('Refreshing...\n')
+                            else:
+                                print('Unable to retreive data from Morningstar. Exiting program...')
+                                sys.exit()
+                    
+                    # Store collected data as text and reset failure count
+                    compare[index] = []
+                    compare[index].append(element[0].text.rstrip('%'))
+                    compare[index].append(element[1].text.rstrip('%'))
+
+                yeet = False
+            except Exception as e:
+                    print('\nStale element\n')
 
         # Store and display TTM yield
         bond.exp = compare[0][0]
         print('Expense Ratio'.ljust(29) + ':' + bond.exp.rjust(7) + '%')
         bond.yld = compare[0][1]
         print('TTM Yield'.ljust(29) + ':' + bond.yld.rjust(7) + '%')
-        compare = [0, 1]
 
-        # Get rest of bond data
-        # Only compare results when page has been loaded multiple of 2 times
-        while not (index and compare[0] == compare[1]):
-            # Switch between first and second element of compare list
-            index = int(not index) 
-            
-            # Load page
-            while failures != -1:
-                try:
-                    browser.get('http://performance.morningstar.com/fund/performance-return.action?t=' + bond.ticker + '&region=usa&culture=en_US')
-                    element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'a[tabname="#tabquarter"]')))
-                    element.click()
-                    element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, 'div[id="tab-quar-end-content"] td[class="row_data"]')))
-                    failures = -1
-                except Exception as e:
-                    print('\nError loading page:\n')
-                    print(e)
+        yeet = True
+        while yeet:
+            try:
+                # Get rest of bond data
+                # Only compare results when page has been loaded multiple of 2 times
+                index = 1
+                compare = [0, 1]
+                while not (index and compare[0] == compare[1]):
+                    # Switch between first and second element of compare list
+                    index = int(not index) 
+                    
+                    # Load page
+                    failures = 0
+                    while failures != -1:
+                        try:
+                            browser.get('http://performance.morningstar.com/fund/performance-return.action?t=' + bond.ticker + '&region=usa&culture=en_US')
+                            element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'a[tabname="#tabquarter"]')))
+                            element.click()
+                            element = WebDriverWait(browser, 20).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, 'div[id="tab-quar-end-content"] td[class="row_data"]')))
+                            failures = -1
+                        except Exception as e:
+                            print('\nError loading page:\n')
+                            print(e)
 
-                    # Exit program if page fails to load 5 times
-                    failures += 1
-                    if failures < 5:
-                        print('Refreshing...\n')
-                    else:
-                        print('Unable to retreive data from Morningstar. Exiting program...')
-                        sys.exit()
-            
-            # Store collected data as text and reset failure count            
-            compare[index] = []
-            for i in range(len(element)):
-                compare[index].append(element[i].text)
-            failures = 0
+                            # Exit program if page fails to load 5 times
+                            failures += 1
+                            if failures < 5:
+                                print('Refreshing...\n')
+                            else:
+                                print('Unable to retreive data from Morningstar. Exiting program...')
+                                sys.exit()
+                    
+                    # Store collected data as text and reset failure count            
+                    compare[index] = []
+                    for i in range(len(element)):
+                        compare[index].append(element[i].text)
+
+                yeet = False
+            except Exception as e:
+                print('\nStale element\n')
 
         # Store and display rest of bond data
         bond.ytd = compare[0][3]
