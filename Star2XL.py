@@ -69,9 +69,9 @@ def get_values(browser=None, bonds=[]):
     for bond in bonds:
         print('Fetching data for ' + bond.ticker + '...')
 
-        # hopefully temporary
-        yeet = True
-        while yeet:
+        # Temporary fix for stale element issue until new method is devised
+        ripe = True
+        while ripe:
             try:
                 # Get TTM yield
                 # Only compare results when page has been loaded multiple of 2 times
@@ -106,7 +106,7 @@ def get_values(browser=None, bonds=[]):
                     compare[index].append(element[0].text.rstrip('%'))
                     compare[index].append(element[1].text.rstrip('%'))
 
-                yeet = False
+                ripe = False
             except Exception as e:
                     print('\nStale element\n')
 
@@ -116,8 +116,8 @@ def get_values(browser=None, bonds=[]):
         bond.yld = compare[0][1]
         print('TTM Yield'.ljust(29) + ':' + bond.yld.rjust(7) + '%')
 
-        yeet = True
-        while yeet:
+        ripe = True
+        while ripe:
             try:
                 # Get rest of bond data
                 # Only compare results when page has been loaded multiple of 2 times
@@ -153,7 +153,7 @@ def get_values(browser=None, bonds=[]):
                     for i in range(len(element)):
                         compare[index].append(element[i].text)
 
-                yeet = False
+                ripe = False
             except Exception as e:
                 print('\nStale element\n')
 
