@@ -2,5 +2,6 @@
 output.xlsx
 
 # Visual Studio
+.vs
 debug.log
 Star2XL.pyproj
